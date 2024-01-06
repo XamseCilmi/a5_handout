@@ -11,15 +11,43 @@ class SantaHandler(socketserver.StreamRequestHandler):
     def handle(self):
         # Read the message
         msg = self.request.recv(MAX_MSG_LEN)
+        if b'-' in msg:
+            body = msg[msg.index(b'-') + 1:]
+            msg = msg[:msg.index(b'-')]
 
-        # TODO You must implement a handler function that can handle mutiple 
-        # different messages at the same time. This might be heavily 'inspired'
-        # by naive_santa.py, but must also account for any concurrency issues 
-        # (races and deadlock) that arise from this
+        if msg == MSG_HOLIDAY_OVER:
+            reindeer_host = body[:body.index(b':')].decode()
+            reindeer_port = int(body[body.index(b':') + 1:].decode())
 
-        # Checkin function will 'check in' with a checkin process, if one is 
-        # available. This can be removed if you are confident in your answer 
-        # and want to avoid the slowdown it adds
+            with Lock():
+                self.server.reindeer_counter.append((reindeer_host, reindeer_port))
+
+                if len(self.server.reindeer_counter) == self.server.num_reindeer:
+                    print(f"Santa is delivering presents with all {self.server.num_reindeer} the reindeer")
+                    for host, port in self.server.reindeer_counter:
+                        sending_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sending_socket.connect((host, port))
+                        sending_socket.sendall(MSG_DELIVER_PRESENTS)
+                        sending_socket.close()
+                    self.server.reindeer_counter = []
+
+        elif msg == MSG_PROBLEM:
+            elf_host = body[:body.index(b':')].decode()
+            elf_port = int(body[body.index(b':') + 1:].decode())
+
+            with Lock():
+                self.server.elf_counter.append((elf_host, elf_port))
+
+                if len(self.server.elf_counter) == self.server.elf_group:
+                    print(f"Santa is solving a problem with {len(self.server.elf_counter)} elves")
+                    for host, port in self.server.elf_counter:
+                        sending_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                        sending_socket.connect((host, port))
+                        sending_socket.sendall(MSG_SORT_PROBLEM)
+                        sending_socket.close()
+                    self.server.elf_counter = []
+
+        
         checkin(f"Santa")
 
 # A socketserver class to run santa as a constant server
