@@ -14,6 +14,7 @@ def santa(host, port, num_reindeer, elf_group):
 
     # Setup the lists for collecting reindeer and elf addresses (hint)
     reindeer_counter = []
+    elf_counter = []
 
     # Run forever, its a thankless life always being awoken by these reindeer 
     # and elves
@@ -60,7 +61,21 @@ def santa(host, port, num_reindeer, elf_group):
             # when enough of them have a problem. As in the case of reindeer 
             # delivering presents, you just need to get santa and the relevent 
             # elves printing a message at approximately the same time.
-            pass 
+            elf_host = body[:body.index(b':')].decode()
+            elf_port = int(body[body.index(b':')+1:].decode())
+
+            elf_counter.append((elf_host, elf_port))
+
+            if len(elf_counter) == elf_group:
+                print(f"Santa is solving a problem with {len(elf_counter)} elves")
+
+                for host, port in elf_counter:
+                    sending_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sending_socket.connect((host, port))
+                    sending_socket.sendall(MSG_SORT_PROBLEM)
+                    sending_socket.close()
+
+                elf_counter = []
 
         # If we get something we didn't expect then abort
         else:
